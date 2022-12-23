@@ -9,6 +9,8 @@ const cors = require('cors')
 const app = express()
 app.enable('trust proxy')
 
+const PORT = process.env.PORT || 3000
+
 app.use(
   compression({
     threshold: 0,
@@ -36,42 +38,43 @@ app.use(limiter)
 
 app.use(express.static(path.join(__dirname, 'public')))
 
-const PORT = process.env.PORT || 6969
-
-let page
-puppeteer.launch({ headless: true }).then(async (browser) => {
-  page = await browser.newPage()
-  console.log('Launched page.')
-})
-
 app.get('/', (req, res) => {
   res.sendFile('index.html', { root: __dirname })
 })
 
 app.get('/downloadInfo', async (req, res) => {
-  let { url } = req.query
+  try {
+    const url = new URL(req.query.url)
 
-  if (!url) return res.status(400).send('missing url.')
+    if (!url) throw new Error('No Url.')
 
-  url = new URL(url)
-  if (!url.hostname.includes('tiktok.com'))
-    return res.status(400).json({
-      message: 'Bad',
+    if (!url.hostname.includes('tiktok.com'))
+      throw new Error('Url is not tiktok.')
+
+    const browser = await puppeteer.launch({ headless: true })
+    const page = await browser.newPage()
+
+    await page.goto(url)
+
+    const result = await page.evaluate(() => {
+      const thumbNail = document.querySelector('img')?.getAttribute('src')
+      const videoUrl = document.querySelector('video')?.getAttribute('src')
+
+      return {
+        thumbNail,
+        videoUrl,
+      }
     })
 
-  await page.goto(url, { isolation: 'origin' })
+    await browser.close()
 
-  const result = await page.evaluate(() => {
-    const thumbNail = document.querySelector('img')?.getAttribute('src')
-    const videoUrl = document.querySelector('video')?.getAttribute('src')
-
-    return {
-      thumbNail,
-      videoUrl,
-    }
-  })
-
-  res.json(result)
+    res.json(result)
+  } catch (e) {
+    console.error(e)
+    res.status(400).json({
+      message: 'bad request',
+    })
+  }
 })
 
 app.listen(PORT, () => console.log(`app listening on port ${PORT}`))
