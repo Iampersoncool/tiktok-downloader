@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const puppeteer = require('puppeteer')
 const rateLimit = require('express-rate-limit')
 const helmet = require('helmet')
@@ -10,6 +12,7 @@ const app = express()
 app.enable('trust proxy')
 
 const PORT = process.env.PORT || 3000
+const isProduction = process.env.NODE_ENV === 'production'
 
 app.use(
   compression({
@@ -51,7 +54,12 @@ app.get('/downloadInfo', async (req, res) => {
     if (!url.hostname.includes('tiktok.com'))
       throw new Error('Url is not tiktok.')
 
-    const browser = await puppeteer.launch({ headless: true })
+    const browser = isProduction
+      ? await puppeteer.connect(
+          `wss://chrome.browserless.io?token=${process.env.API_KEY}`
+        )
+      : await puppeteer.launch({ headless: true })
+
     const page = await browser.newPage()
 
     await page.goto(url)
