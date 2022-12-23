@@ -14,6 +14,8 @@ app.enable('trust proxy')
 const PORT = process.env.PORT || 3000
 const isProduction = process.env.NODE_ENV === 'production'
 
+isProduction ? console.log('production') : console.log('not production')
+
 app.use(
   compression({
     threshold: 0,
@@ -55,9 +57,9 @@ app.get('/downloadInfo', async (req, res) => {
       throw new Error('Url is not tiktok.')
 
     const browser = isProduction
-      ? await puppeteer.connect(
-          `wss://chrome.browserless.io?token=${process.env.API_KEY}`
-        )
+      ? await puppeteer.connect({
+          browserWSEndpoint: `wss://chrome.browserless.io?token=${process.env.API_KEY}`,
+        })
       : await puppeteer.launch({ headless: true })
 
     const page = await browser.newPage()
