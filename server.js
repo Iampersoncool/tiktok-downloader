@@ -39,7 +39,6 @@ app.use(express.static(path.join(__dirname, 'public')))
 const PORT = process.env.PORT || 6969
 
 let page
-
 puppeteer.launch({ headless: true }).then(async (browser) => {
   page = await browser.newPage()
   console.log('Launched page.')
